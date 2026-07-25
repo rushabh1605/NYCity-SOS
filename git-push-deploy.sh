@@ -17,10 +17,13 @@ echo "🐳 STEP 2: Rebuilding container via Cloud Build..."
 echo "--------------------------------------------------"
 gcloud builds submit --tag gcr.io/nyu-ai-builder26nyc-9323/city-sos:latest --project=nyu-ai-builder26nyc-9323
 
-# Load variables from local .env file
+# Load variables from local .env file (check current directory first, fallback to parent directory)
 if [ -f .env ]; then
-  echo "🔑 Loading environment variables from .env..."
+  echo "🔑 Loading environment variables from current .env..."
   export $(grep -v '^#' .env | xargs)
+elif [ -f ../.env ]; then
+  echo "🔑 Loading environment variables from parent .env..."
+  export $(grep -v '^#' ../.env | xargs)
 fi
 
 if [ -z "$GEMINI_API_KEY" ]; then
