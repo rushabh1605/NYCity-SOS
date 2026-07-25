@@ -1,7 +1,7 @@
 /**
  * City SOS Gemini Live Voice Engine Adapter
  * Handles Web Audio API PCM microphone capture, WebSocket streaming to /ws/live,
- * 24kHz PCM audio playback queueing, interruption management, and UI callbacks.
+ * 24kHz PCM audio playback queueing, interruption management, text input fallback, and UI callbacks.
  */
 export class VoiceAdapter {
   constructor(options = {}) {
@@ -30,21 +30,42 @@ export class VoiceAdapter {
     this.state = 'idle';
   }
 
-  async connect() {
+  async connect(enableMic = true) {
     this.state = 'connecting';
     
     try {
       window.AudioContext = window.AudioContext || window.webkitAudioContext;
       this.audioContext = new AudioContext({ sampleRate: 24000 });
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
 
-      this.micStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000,
-          echoCancellation: true,
-          noiseSuppression: true
+      if (enableMic) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('SECURE_CONTEXT_REQUIRED');
         }
-      });
+
+        try {
+          this.micStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              channelCount: 1,
+              sampleRate: 16000,
+              echoCancellation: true,
+              noiseSuppression: true
+            }
+          });
+        } catch (micErr) {
+          console.warn('Microphone getUserMedia failed:', micErr);
+          let userFriendlyMsg = 'Microphone access required';
+          if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
+            userFriendlyMsg = 'Mic permission blocked. Click the lock 🔒 icon in address bar to allow.';
+          } else if (micErr.name === 'NotFoundError' || micErr.name === 'DevicesNotFoundError') {
+            userFriendlyMsg = 'No microphone device found on system.';
+          }
+          // Propagate error to caller
+          throw new Error(userFriendlyMsg);
+        }
+      }
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws/live`;
@@ -56,7 +77,10 @@ export class VoiceAdapter {
         this.state = 'listening';
         this.handlers.onConnected();
         this.handlers.onListening();
-        this._startMicCapture();
+        
+        if (this.micStream) {
+          this._startMicCapture();
+        }
       };
 
       this.ws.onmessage = (event) => {
@@ -82,7 +106,10 @@ export class VoiceAdapter {
     } catch (err) {
       console.error('Failed to start voice session:', err);
       this.disconnect();
-      this.handlers.onError('Microphone access required');
+      const errorText = err.message === 'SECURE_CONTEXT_REQUIRED'
+        ? 'Microphone requires localhost or HTTPS'
+        : (err.message || 'Microphone access required');
+      this.handlers.onError(errorText);
     }
   }
 
@@ -107,6 +134,23 @@ export class VoiceAdapter {
 
     this._stopAudioPlayback();
     this.handlers.onDisconnected();
+  }
+
+  sendTextMessage(text) {
+    if (!text || !text.trim()) return;
+    const cleanText = text.trim();
+    
+    // Log transcript locally
+    this.handlers.onUserTranscript(cleanText);
+    this._detectCoverKeywords(cleanText);
+
+    // If connected via WS, send text to model
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'text_transcript',
+        text: cleanText
+      }));
+    }
   }
 
   _startMicCapture() {
@@ -252,7 +296,7 @@ export class VoiceAdapter {
     return btoa(binary);
   }
 
-  // --- Stubs for ?dev=1 simulation ---
+  // --- Stubs for simulation ---
   simulateUserSpeech(text) {
     this.handlers.onUserTranscript(text);
   }

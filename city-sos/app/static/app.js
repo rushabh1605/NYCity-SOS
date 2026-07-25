@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const transcriptBody = document.getElementById('transcriptBody');
   const campusSelect = document.getElementById('campusSelect');
   const devToolbar = document.getElementById('devToolbar');
+  const chatInput = document.getElementById('chatInput');
+  const sendChatBtn = document.getElementById('sendChatBtn');
 
   const transcriptHistory = [
     "agent: Hello! I'm your City SOS companion. How can I help you today?"
@@ -65,11 +67,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
   talkBtn.addEventListener('click', () => {
     if (!adapter.isConnected && adapter.state === 'idle') {
-      adapter.connect();
+      adapter.connect(true);
     } else {
       adapter.disconnect();
     }
   });
+
+  // Text input chat handlers
+  function handleSendChat() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+    
+    // Auto-connect if disconnected
+    if (!adapter.isConnected) {
+      adapter.connect(false).then(() => {
+        adapter.sendTextMessage(text);
+        chatInput.value = '';
+      }).catch(() => {
+        adapter.sendTextMessage(text);
+        chatInput.value = '';
+      });
+    } else {
+      adapter.sendTextMessage(text);
+      chatInput.value = '';
+    }
+  }
+
+  if (sendChatBtn) {
+    sendChatBtn.addEventListener('click', handleSendChat);
+  }
+
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handleSendChat();
+      }
+    });
+  }
 
   function updateUIState(state, errorMsg = '') {
     if (state === 'disconnected' || state === 'idle') {
@@ -95,7 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
       talkStatusText.textContent = "City SOS is speaking...";
     } else if (state === 'error') {
       talkBtn.className = 'talk-btn error';
-      talkStatusText.textContent = errorMsg || "Connection Error";
+      talkStatusText.textContent = errorMsg || "Microphone access required";
+      talkHint.textContent = "You can also type your message in the chat box below.";
     }
   }
 
