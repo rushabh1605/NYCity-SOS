@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City SOS — Dispatch Center Monitor</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="alert-wrapper">
+
+  <!-- Top Status Banner -->
+  <div class="alert-header-banner standby" id="alertBanner">
+    MONITORING — NO ACTIVE ALERTS
+  </div>
+
+  <!-- Alert Content Grid -->
+  <main class="alert-content-grid">
+    <!-- Left Column: Situation & Metadata -->
+    <div class="alert-panel" id="mainPanel">
+      <div class="timer-box">
+        <div>
+          <div class="timer-label">DISPATCH MONITORING STATUS</div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;" id="channelStatus">
+            Listening on BroadcastChannel ('city-sos-alerts')
+          </div>
+        </div>
+        <div class="timer-count" id="stopwatch">00:00</div>
+      </div>
+
+      <div>
+        <div class="info-label">PRIMARY INFERRED SITUATION</div>
+        <div class="summary-box" id="situationSummary">
+          No active alert. System is silently listening for stealth emergency triggers.
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div>
+          <div class="info-label">USER PROFILE</div>
+          <div class="info-val-large" id="userName">Rushabh P.</div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary);" id="userPhone">+1 (201) 555-0142</div>
+          <div style="font-size: 0.85rem; color: var(--accent-cyan); margin-top: 0.2rem;" id="userCampus">NYU Tandon</div>
+        </div>
+        <div>
+          <div class="info-label">PEOPLE PRESENT</div>
+          <div class="info-val-large" id="peopleCount" style="font-size: 2.2rem; color: var(--accent-amber);">
+            0
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);" id="locationHint">Location hint: --</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Location Map & Transcript Tail -->
+    <div class="alert-panel" id="secondaryPanel">
+      <div>
+        <div class="info-label">LAST KNOWN LOCATION</div>
+        <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;" id="locationLabel">
+          5 MetroTech Center, Brooklyn, NY 11201
+        </div>
+        <div class="map-placeholder">
+          <div class="map-pin"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="info-label">DISGUISED CONVERSATION TRANSCRIPT TAIL</div>
+        <div style="background: rgba(0, 0, 0, 0.6); padding: 0.85rem; border-radius: 8px; font-family: var(--font-mono); font-size: 0.8rem; color: #cbd5e1; height: 140px; overflow-y: auto;" id="transcriptTail">
+          [System listening on BroadcastChannel...]
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Judge-Proofing Footer Line -->
+  <footer class="alert-footer-note">
+    Pending human verification · Dispatch requires operator confirmation
+  </footer>
+
+  <script src="/static/alert.js"></script>
+</body>
+</html>

@@ -149,3 +149,23 @@ To maintain code reliability, prevent repository clutter, and ensure readable co
 *   **Verify Positive Cases**: Run test scripts to confirm target features operate correctly under normal payload conditions.
 *   **Verify Negative/Edge Cases**: Actively test inputs with missing attributes, incorrect types, empty strings, and connection loss to verify structural stability and error boundaries.
 
+---
+
+## 6. Critical Showcase & Integration Focus Areas
+
+To nail the demo for the judges, prioritize these boundaries during final assembly:
+
+### 1. Zero Character Breaks in Cover Mode (Hiren)
+*   **Rule**: The voice companion must NEVER say words like "emergency", "danger", "safety", "help", "alert", or acknowledge tool execution.
+*   **Test Case**: Say "extra pineapple". Verify that the agent replies with a natural pizza comment (e.g. *"Extra pineapple, got it — that's gonna be about twenty-five minutes."*) and continues order-taking normally.
+
+### 2. Dispatch Seriousness & Footers (Nandani)
+*   **Rule**: The alert monitor is a serious dispatcher tool. Emojis must not be used on the alert interface.
+*   **Proofing**: Keep the bottom footer visible: *"Pending human verification · Dispatch requires operator confirmation"*. Never state that the tool calls 911 directly.
+
+### 3. Secure Context & Deployed Microphone Permissions (Rushabh)
+*   **Rule**: Modern browsers only grant microphone access in secure contexts (`localhost` or `https://`).
+*   **Precaution**: Once deployed to Cloud Run, verify the site immediately via cell data on mobile devices.
+*   **Interruption Sync**: Ensure that when the client speaks mid-sentence, the UI/audio queue immediately clears current audio playback to support natural voice flow.
+
+
