@@ -3,6 +3,11 @@
 set -e
 
 echo "--------------------------------------------------"
+echo "📥 STEP 0: Pulling latest changes from GitHub..."
+echo "--------------------------------------------------"
+git pull origin main
+
+echo "--------------------------------------------------"
 echo "🚀 STEP 1: Pushing changes to GitHub main branch..."
 echo "--------------------------------------------------"
 git push origin main
