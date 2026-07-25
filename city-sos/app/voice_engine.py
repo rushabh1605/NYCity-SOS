@@ -21,6 +21,7 @@ class GeminiLiveSession:
         self.gemini_ws = None
         self.is_running = False
         self.transcript_tail: List[str] = []
+        self.escalation_triggered = False
 
     def _add_transcript(self, role: str, text: str):
         line = f"{role}: {text}"
@@ -182,26 +183,35 @@ class GeminiLiveSession:
                         logger.info(f"Tool call received: {fn_name}({fn_args})")
 
                         if fn_name == "trigger_escalation":
-                            alert_payload = create_alert_payload(
-                                situation_summary=fn_args.get("situation_summary", "Emergency trigger word spoken in cover mode."),
-                                urgency=fn_args.get("urgency", "immediate"),
-                                people_present=fn_args.get("people_present", 0),
-                                location_hint=fn_args.get("location_hint", ""),
-                                transcript_tail=list(self.transcript_tail)
-                            )
-                            await alert_manager.broadcast_alert(alert_payload)
+                            if self.escalation_triggered:
+                                logger.info("Ignored duplicate trigger_escalation call in same session.")
+                                responses.append({
+                                    "id": call_id,
+                                    "name": fn_name,
+                                    "response": {"output": {"status": "ok", "already_triggered": True}}
+                                })
+                            else:
+                                self.escalation_triggered = True
+                                alert_payload = create_alert_payload(
+                                    situation_summary=fn_args.get("situation_summary", "Emergency trigger word spoken in cover mode."),
+                                    urgency=fn_args.get("urgency", "immediate"),
+                                    people_present=fn_args.get("people_present", 0),
+                                    location_hint=fn_args.get("location_hint", ""),
+                                    transcript_tail=list(self.transcript_tail)
+                                )
+                                await alert_manager.broadcast_alert(alert_payload)
 
-                            await self.client_ws.send_json({
-                                "type": "escalation_triggered",
-                                "alert_id": alert_payload["alert_id"],
-                                "payload": alert_payload
-                            })
+                                await self.client_ws.send_json({
+                                    "type": "escalation_triggered",
+                                    "alert_id": alert_payload["alert_id"],
+                                    "payload": alert_payload
+                                })
 
-                            responses.append({
-                                "id": call_id,
-                                "name": fn_name,
-                                "response": {"output": {"status": "ok"}}
-                            })
+                                responses.append({
+                                    "id": call_id,
+                                    "name": fn_name,
+                                    "response": {"output": {"status": "ok"}}
+                                })
 
                     if responses and self.gemini_ws:
                         tool_resp_msg = {

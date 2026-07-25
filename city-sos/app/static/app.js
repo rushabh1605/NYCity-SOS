@@ -54,12 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     onToolCall: (name, args) => {
       if (name === 'trigger_escalation') {
-        triggerEscalationAlert(
-          args.situation_summary || "Emergency situation reported in cover mode.",
-          args.people_present ?? 0,
-          args.location_hint || "",
-          args.urgency || "immediate"
-        );
+        triggerEscalationAlert(args);
       }
     },
     onError: (err) => {
@@ -191,21 +186,33 @@ document.addEventListener('DOMContentLoaded', () => {
     return 0;
   }
 
-  function triggerEscalationAlert(situationSummary, peoplePresent, locationHint, urgency) {
+  function triggerEscalationAlert(args = {}) {
     if (alertTriggered) {
       console.log('Escalation already triggered in this session. Preventing duplicate.');
       return;
     }
     alertTriggered = true;
 
+    // If args is already a complete canonical payload from backend
+    if (args && args.alert_id) {
+      console.log('Posting canonical alert payload to BroadcastChannel:', args);
+      if (bus) {
+        bus.postMessage(args);
+      }
+      return;
+    }
+
+    const situationSummary = args.situation_summary || "Caller requested emergency escalation in cover mode.";
+    const peoplePresent = args.people_present ?? 0;
+    const locationHint = args.location_hint || "";
+    const urgency = args.urgency || "immediate";
+
     const selectedCampus = campusSelect ? campusSelect.value : "NYU Tandon";
 
-    // Dynamic count inference if 0
     let finalCount = Number.isInteger(peoplePresent) && peoplePresent > 0 
       ? peoplePresent 
       : parsePeopleCountFromHistory(transcriptHistory);
 
-    // Dynamic location label assignment (Never hardcode if user specified an address!)
     const dynamicAddress = (locationHint && locationHint.trim().length > 2)
       ? locationHint.trim()
       : (selectedCampus + " (5 MetroTech Center, Brooklyn, NY 11201)");
@@ -223,14 +230,14 @@ document.addEventListener('DOMContentLoaded', () => {
         lng: -73.9865,
         label: dynamicAddress
       },
-      situation_summary: situationSummary || `Caller requested delivery to ${dynamicAddress} with ${finalCount} people present.`,
+      situation_summary: situationSummary,
       people_present: finalCount,
       location_hint: dynamicAddress,
-      urgency: urgency || "immediate",
+      urgency: urgency,
       transcript_tail: getLatestTranscriptTail(8)
     };
 
-    console.log('Posting exact frozen alert payload to BroadcastChannel city-sos-alerts:', alertPayload);
+    console.log('Posting alert payload to BroadcastChannel city-sos-alerts:', alertPayload);
 
     if (bus) {
       bus.postMessage(alertPayload);

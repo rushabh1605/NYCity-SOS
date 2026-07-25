@@ -239,14 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Demo Trigger Button Listener
   if (demoTriggerBtn) {
     demoTriggerBtn.addEventListener('click', () => {
-      fetch('/api/alerts/trigger-demo')
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.alert) {
-            addOrUpdateAlert(data.alert);
-          }
-        })
-        .catch(err => console.error('Demo trigger error:', err));
+      fetch('/api/alerts/trigger-demo').catch(err => console.error('Demo trigger error:', err));
     });
   }
 
