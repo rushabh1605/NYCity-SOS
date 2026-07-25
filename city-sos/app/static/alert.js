@@ -248,7 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const bus = new BroadcastChannel('city-sos-alerts');
     bus.onmessage = (e) => {
       console.log('Received BroadcastChannel alert:', e.data);
-      if (e.data) {
+      if (e.data && e.data.action === 'dismiss_alert') {
+        if (e.data.alert_id) removeAlert(e.data.alert_id);
+      } else if (e.data && e.data.alert_id && !e.data.action) {
         addOrUpdateAlert(e.data);
       }
     };
@@ -263,16 +265,26 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const msg = JSON.parse(e.data);
         if (msg.action === 'initial_state' || msg.action === 'clear_all') {
+          activeAlertsMap.clear();
+          if (Array.isArray(msg.all_alerts)) {
+            msg.all_alerts.forEach(a => addOrUpdateAlert(a));
+          }
+          renderDashboard();
+        }
+        else if (msg.action === 'dismiss_alert') {
+          if (msg.alert_id) {
+            removeAlert(msg.alert_id);
+          }
           if (Array.isArray(msg.all_alerts)) {
             activeAlertsMap.clear();
             msg.all_alerts.forEach(a => addOrUpdateAlert(a));
-            renderDashboard();
           }
+          renderDashboard();
         }
         else if (msg.action === 'new_alert' && msg.alert) {
           addOrUpdateAlert(msg.alert);
         }
-        else if (msg.alert_id) {
+        else if (msg.alert_id && !msg.action) {
           addOrUpdateAlert(msg);
         }
       } catch (parseErr) {}
