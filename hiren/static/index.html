@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City SOS — NYC & Campus Voice Safety Companion</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header & Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">SOS</div>
+      <div>
+        <div class="brand-title">City SOS</div>
+        <div class="brand-subtitle">Voice Safety & Relief Companion (Hiren's Core)</div>
+      </div>
+    </div>
+    
+    <div class="stealth-status" id="stealthStatus">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusLabel">Voice Disconnected</span>
+    </div>
+  </header>
+
+  <!-- Main UI Container -->
+  <main class="main-container">
+    <!-- Settings Bar -->
+    <section class="settings-bar">
+      <span class="setting-label">Campus / Organization:</span>
+      <select id="campusSelect" class="setting-select">
+        <option value="nyu_tandon" selected>NYU Tandon (Brooklyn Campus)</option>
+        <option value="columbia">Columbia University (Morningside)</option>
+        <option value="cuny_hunter">CUNY Hunter College</option>
+        <option value="nyc_general">General NYC Resident</option>
+      </select>
+      
+      <div style="margin-left: auto; display: flex; gap: 0.5rem;">
+        <a href="/alert" target="_blank" style="color: var(--accent-cyan); font-size: 0.85rem; text-decoration: none; border: 1px solid var(--border-subtle); padding: 0.3rem 0.6rem; border-radius: 6px;">
+          Open Alert Window ↗
+        </a>
+      </div>
+    </section>
+
+    <!-- Talk Control Center -->
+    <section class="control-center">
+      <button class="talk-btn" id="talkBtn" aria-label="Toggle Voice AI Companion">
+        🎙️
+      </button>
+      <div class="talk-status-text" id="talkStatusText">Tap to Connect Voice Companion</div>
+      <div class="talk-hint" id="talkHint">Ask for cooling centers, campus security, or talk naturally.</div>
+    </section>
+
+    <!-- Real-time Speech Transcript Panel -->
+    <section class="transcript-card">
+      <div class="transcript-header">
+        <div class="transcript-title">
+          <span>Live Conversation Log</span>
+        </div>
+        <span class="live-badge">REAL-TIME</span>
+      </div>
+      <div class="transcript-body" id="transcriptBody">
+        <div class="transcript-entry agent">
+          <div class="entry-speaker">City SOS Voice</div>
+          <div class="entry-bubble">Hello! I'm your City SOS companion. How can I help you today?</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>
