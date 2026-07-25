@@ -34,7 +34,7 @@ TRIGGER_ESCALATION_TOOL = {
 class AlertManager:
     def __init__(self):
         self.subscribers: Set[asyncio.Queue] = set()
-        self.last_alert: Dict[str, Any] | None = None
+        self.active_alerts: List[Dict[str, Any]] = []
 
     def subscribe(self) -> asyncio.Queue:
         queue = asyncio.Queue()
@@ -45,10 +45,33 @@ class AlertManager:
         self.subscribers.discard(queue)
 
     async def broadcast_alert(self, alert_data: Dict[str, Any]):
-        self.last_alert = alert_data
+        # Add to active alerts list (keep latest 10)
+        self.active_alerts.insert(0, alert_data)
+        if len(self.active_alerts) > 10:
+            self.active_alerts.pop()
+
+        payload = {"action": "new_alert", "alert": alert_data, "all_alerts": self.active_alerts}
         for queue in list(self.subscribers):
             try:
-                await queue.put(alert_data)
+                await queue.put(payload)
+            except Exception:
+                pass
+
+    async def clear_all(self):
+        self.active_alerts.clear()
+        payload = {"action": "clear_all", "all_alerts": []}
+        for queue in list(self.subscribers):
+            try:
+                await queue.put(payload)
+            except Exception:
+                pass
+
+    async def dismiss_alert(self, alert_id: str):
+        self.active_alerts = [a for a in self.active_alerts if a.get("alert_id") != alert_id]
+        payload = {"action": "dismiss_alert", "alert_id": alert_id, "all_alerts": self.active_alerts}
+        for queue in list(self.subscribers):
+            try:
+                await queue.put(payload)
             except Exception:
                 pass
 

@@ -65,6 +65,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  const resetSessionBtn = document.getElementById('resetSessionBtn');
+
+  function resetSessionState() {
+    if (adapter) {
+      adapter.disconnect();
+    }
+    alertTriggered = false;
+    currentMode = 'normal';
+    statusDot.className = 'status-dot';
+    statusLabel.textContent = 'Companion Ready';
+    transcriptHistory.length = 0;
+    transcriptBody.innerHTML = '';
+    appendTranscriptLine('agent', "Hello! I'm your City SOS companion. How can I help you today?");
+    updateUIState('disconnected');
+  }
+
+  if (resetSessionBtn) {
+    resetSessionBtn.addEventListener('click', resetSessionState);
+  }
+
   talkBtn.addEventListener('click', () => {
     if (!adapter.isConnected && adapter.state === 'idle') {
       adapter.connect(true);
