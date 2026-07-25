@@ -18,6 +18,9 @@ __pycache__/
 # OS specific files
 .DS_Store
 Thumbs.db
+._*
+.Spotlight-V100
+.Trashes
 
 # IDE & Editor files
 .vscode/

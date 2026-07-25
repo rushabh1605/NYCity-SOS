@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City SOS — Alert Dispatch Center</title>
+    <!-- Custom grid layout & premium visual style sheets -->
+    <link rel="stylesheet" href="/static/style.css">
+    
+    <!-- Leaflet.js CSS for Dark Map rendering -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Leaflet.js Script library for interactive location mapping -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+
+    <!-- 
+      Connection Status Badge:
+      Displays SSE connection status to the operator in the bottom-left corner.
+      Classes: 'conn-status online' (Green) or 'conn-status offline' (Red/Flashing).
+    -->
+    <div id="connection-status" class="conn-status offline">
+        <div class="conn-dot"></div>
+        <span id="conn-text">DISCONNECTED</span>
+    </div>
+
+    <!-- 
+      1. STANDBY VIEW:
+      The initial state shown to the audience on the projector.
+      Displays a dark theme, pulsing radar anim, and a calm status indicating "Monitoring Active".
+    -->
+    <div id="standby-view">
+        <div class="radar-pulse">
+            <div class="inner-dot"></div>
+        </div>
+        <h1 class="standby-title">Monitoring Active</h1>
+        <p class="standby-subtitle">STANDBY FOR INCOMING DISTRESS BEACONS</p>
+    </div>
+
+    <!-- 
+      2. ACTIVE ALERT VIEW:
+      The emergency dispatch dashboard shown when a distress signal is intercepted.
+      Transitions rapidly (< 150ms) to display data grids.
+    -->
+    <div id="alert-view">
+        <!-- Header Banner: Flashes red for 'immediate' or amber for 'standard' alerts -->
+        <header id="status-banner" class="status-banner immediate">
+            <div class="banner-left">
+                <span class="status-badge" id="alert-urgency-badge">ALERT DISPATCHED</span>
+                <span class="incident-id" id="display-incident-id">INCIDENT ID: N/A</span>
+            </div>
+            <!-- Live Duration Counter: Creates visual urgency by tracking time since dispatcher alert -->
+            <div class="timer-container">
+                <span class="timer-label">Time Elapsed</span>
+                <span class="timer-counter" id="timer-counter">00:00</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Content Grid -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Info Panel: Displays caller details and AI inferred situation summaries -->
+            <section class="card">
+                <h2 class="card-title">Distress Payload Details</h2>
+                
+                <div class="info-section">
+                    <div class="info-row">
+                        <span class="info-label">User Name</span>
+                        <span class="info-value" id="user-name">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Phone Reference</span>
+                        <span class="info-value" id="user-phone">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Campus Focus</span>
+                        <span class="info-value" id="user-campus">-</span>
+                    </div>
+                    <!-- Coded information extracted from the pizza conversation -->
+                    <div class="info-row" id="people-present-row">
+                        <span class="info-label">People Present (Coded)</span>
+                        <span class="info-value highlight" id="people-present">0</span>
+                    </div>
+                    <div class="info-row" id="location-hint-row">
+                        <span class="info-label">Location Hint</span>
+                        <span class="info-value" id="location-hint">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Report Location</span>
+                        <span class="info-value" id="location-label" style="text-align: right; max-width: 60%;">-</span>
+                    </div>
+                </div>
+
+                <!-- Inference Box highlighting what the LLM detected from the cover conversation -->
+                <div class="summary-box">
+                    <h3 class="summary-title">Situation Inference</h3>
+                    <p class="summary-text" id="situation-summary">Waiting for details...</p>
+                </div>
+            </section>
+
+            <!-- Right Interactive Map Panel: Renders dark Leaflet map centered at user GPS coordinate -->
+            <section class="card map-card">
+                <div id="map"></div>
+            </section>
+
+            <!-- Bottom Full-Width Transcript Log: Styled like an emergency dispatcher terminal console -->
+            <section class="card transcript-card">
+                <h2 class="card-title">Live Conversation Log</h2>
+                <div class="transcript-console" id="transcript-console">
+                    <!-- Lines dynamically appended by script (formatted by user vs agent) -->
+                </div>
+            </section>
+
+            <!-- Footer Compliance / Judge Proofing Note -->
+            <footer class="footer-banner">
+                Pending human verification &middot; Dispatch requires operator confirmation &middot; Broadcast Channel: city-sos-alerts
+            </footer>
+        </main>
+    </div>
+
+    <!-- Notification Sound Chime played upon receiving an alert -->
+    <audio id="alert-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav" preload="auto"></audio>
+
+    <script>
+        // Global variables to track Leaflet map objects and timer reference IDs
+        let map = null;
+        let marker = null;
+        let timerInterval = null;
+        let alertStartTime = null;
+        let eventSource = null;
+
+        // View DOM references
+        const standbyView = document.getElementById('standby-view');
+        const alertView = document.getElementById('alert-view');
+        const connStatus = document.getElementById('connection-status');
+        const connText = document.getElementById('conn-text');
+        const alertSound = document.getElementById('alert-sound');
+
+        // BroadcastChannel configuration: allows same-origin browser tabs to share/render states
+        const localBus = new BroadcastChannel('city-sos-alerts');
+        localBus.onmessage = (e) => {
+            console.log('Received BroadcastChannel message:', e.data);
+            if (e.data.action === 'clear') {
+                resetToStandby();
+            } else {
+                handleIncomingAlert(e.data);
+            }
+        };
+
+        /**
+         * Initialize or update Leaflet Map configuration.
+         * Creates dark tiles dynamically using a CSS filter hook on the tile assets.
+         */
+        function initMap(lat, lng) {
+            if (!map) {
+                // Instantiate the map instance on target container
+                map = L.map('map', {
+                    zoomControl: true,
+                    attributionControl: false
+                }).setView([lat, lng], 16);
+
+                // Add standard OpenStreetMap tiles (dark styling applied via static/style.css filter)
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19
+                }).addTo(map);
+            } else {
+                // If map is already initialized, pan & zoom to the new coordinates smoothly
+                map.setView([lat, lng], 16);
+            }
+
+            // Reposition or create markers
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng]).addTo(map);
+            }
+        }
+
+        /**
+         * Starts a live counting timer that displays the seconds/minutes elapsed 
+         * since the alert was generated.
+         */
+        function startTimer(timestampStr) {
+            stopTimer(); // Ensure existing intervals are cleared
+            
+            // Parse UTC timestamp into local Javascript date
+            alertStartTime = timestampStr ? new Date(timestampStr) : new Date();
+            
+            // Fallback to current datetime if timestamp parsing yields NaN
+            if (isNaN(alertStartTime.getTime())) {
+                alertStartTime = new Date();
+            }
+
+            const timerCounter = document.getElementById('timer-counter');
+
+            timerInterval = setInterval(() => {
+                const now = new Date();
+                const diffMs = now - alertStartTime;
+                const diffSecs = Math.max(0, Math.floor(diffMs / 1000));
+                
+                // Format: MM:SS
+                const mins = String(Math.floor(diffSecs / 60)).padStart(2, '0');
+                const secs = String(diffSecs % 60).padStart(2, '0');
+                timerCounter.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        /**
+         * Clears timer intervals and resets the text.
+         */
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            document.getElementById('timer-counter').textContent = "00:00";
+        }
+
+        /**
+         * Core controller logic for rendering alert data on screen.
+         * Validates all incoming properties, renders fallbacks, and executes transition animations.
+         */
+        function handleIncomingAlert(data) {
+            console.log('Rendering Alert Payload:', data);
+
+            // Attempt to play sound chime (requires user interaction first on some browsers)
+            try {
+                alertSound.play();
+            } catch (e) {
+                console.warn('Audio play blocked or unavailable:', e);
+            }
+
+            // Visual transition: Switch views under 150ms
+            standbyView.style.display = 'none';
+            alertView.style.display = 'flex';
+
+            // 1. Resolve urgency banner display styles
+            const statusBanner = document.getElementById('status-banner');
+            const urgencyBadge = document.getElementById('alert-urgency-badge');
+            const urgency = (data.urgency || 'immediate').toLowerCase();
+            
+            if (urgency === 'immediate') {
+                statusBanner.className = 'status-banner immediate';
+                urgencyBadge.textContent = 'ALERT DISPATCHED';
+            } else {
+                statusBanner.className = 'status-banner standard';
+                urgencyBadge.textContent = 'STANDARD BEACON';
+            }
+
+            // 2. Incident identifier
+            document.getElementById('display-incident-id').textContent = `INCIDENT ID: ${data.alert_id ? data.alert_id.substring(0, 8) : 'AUTO'}`;
+
+            // 3. User details with fallback defaults
+            const user = data.user || {};
+            document.getElementById('user-name').textContent = user.name || 'Unknown Subject';
+            document.getElementById('user-phone').textContent = user.phone || 'Unknown Contact';
+            document.getElementById('user-campus').textContent = user.campus || 'N/A';
+
+            // 4. People present validation: Dim the row if no bystanders are present
+            const people = data.people_present;
+            const peoplePresentEl = document.getElementById('people-present');
+            const peopleRow = document.getElementById('people-present-row');
+            if (people !== undefined && people !== null && people > 0) {
+                peoplePresentEl.textContent = people;
+                peopleRow.style.opacity = '1';
+            } else {
+                peoplePresentEl.textContent = '0 / Unspecified';
+                peopleRow.style.opacity = '0.4';
+            }
+
+            // 5. Coded location hints (e.g. 'extra cheese' indicators or room references)
+            const hint = data.location_hint;
+            const hintRow = document.getElementById('location-hint-row');
+            if (hint) {
+                document.getElementById('location-hint').textContent = hint;
+                hintRow.style.display = 'flex';
+            } else {
+                hintRow.style.display = 'none';
+            }
+
+            // 6. AI text inference
+            document.getElementById('situation-summary').textContent = data.situation_summary || 'No summary available.';
+
+            // 7. GPS location map plotting
+            const loc = data.location || {};
+            document.getElementById('location-label').textContent = loc.label || 'Unknown Location';
+            
+            // Map GPS validation: default to NYU Tandon coordinates if GPS values are omitted/corrupt
+            const lat = parseFloat(loc.lat) || 40.6942;
+            const lng = parseFloat(loc.lng) || -73.9865;
+            
+            initMap(lat, lng);
+
+            // 8. Monospace transcript parser & styling
+            const transcriptConsole = document.getElementById('transcript-console');
+            transcriptConsole.innerHTML = '';
+            
+            const tail = data.transcript_tail || [];
+            if (tail.length === 0) {
+                transcriptConsole.innerHTML = '<div class="transcript-line" style="color: var(--text-muted)">No active conversation logs.</div>';
+            } else {
+                tail.forEach(line => {
+                    const lineDiv = document.createElement('div');
+                    
+                    // Style lines based on speakers
+                    if (line.toLowerCase().startsWith('user:')) {
+                        lineDiv.className = 'transcript-line user';
+                        lineDiv.innerHTML = `<span class="transcript-speaker">USER:</span> <span>${line.substring(5).trim()}</span>`;
+                    } else if (line.toLowerCase().startsWith('agent:') || line.toLowerCase().startsWith('assistant:')) {
+                        lineDiv.className = 'transcript-line agent';
+                        const prefixLength = line.toLowerCase().startsWith('agent:') ? 6 : 10;
+                        lineDiv.innerHTML = `<span class="transcript-speaker">AGENT:</span> <span>${line.substring(prefixLength).trim()}</span>`;
+                    } else {
+                        lineDiv.className = 'transcript-line';
+                        lineDiv.textContent = line;
+                    }
+                    transcriptConsole.appendChild(lineDiv);
+                });
+            }
+            
+            // Auto scroll console to keep newest utterances visible
+            transcriptConsole.scrollTop = transcriptConsole.scrollHeight;
+
+            // Trigger counting timer using the alert's creation time
+            startTimer(data.timestamp);
+        }
+
+        /**
+         * Returns screen back to standby, clearing active timers and alerts
+         */
+        function resetToStandby() {
+            stopTimer();
+            standbyView.style.display = 'flex';
+            alertView.style.display = 'none';
+        }
+
+        /**
+         * Subscribes to the FastAPI Server-Sent Events (SSE) stream.
+         * Auto-reconnects with a backoff if the network link drops.
+         */
+        function connectSSE() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // Create browser SSE connection instance (configured to match Hiren's unified /api/alerts/stream endpoint)
+            eventSource = new EventSource('/api/alerts/stream');
+
+            eventSource.onopen = () => {
+                console.log('SSE Stream Connected successfully');
+                connStatus.className = 'conn-status online';
+                connText.textContent = 'CONNECTED';
+            };
+
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.action === 'clear') {
+                    resetToStandby();
+                } else {
+                    handleIncomingAlert(data);
+                }
+            };
+
+            eventSource.onerror = (err) => {
+                console.error('SSE Stream Error:', err);
+                connStatus.className = 'conn-status offline';
+                connText.textContent = 'RECONNECTING...';
+                
+                // Disconnect and attempt to establish reconnect in 3 seconds
+                eventSource.close();
+                setTimeout(connectSSE, 3000);
+            };
+        }
+
+        /**
+         * URL Query Parameter detector.
+         * If page is loaded with '?demo=1', triggers an automatic POST request
+         * to `/api/mock-alert` after 2 seconds to showcase state transition on the projector.
+         */
+        function checkDemoParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('demo') === '1') {
+                console.log('Demo mode active: Sending mock trigger in 2 seconds...');
+                setTimeout(() => {
+                    fetch('/api/mock-alert', {
+                        method: 'POST'
+                    })
+                    .then(res => res.json())
+                    .then(data => console.log('Mock Alert Sent:', data))
+                    .catch(err => console.error('Error sending mock alert:', err));
+                }, 2000);
+            }
+        }
+
+        // Initialize script logic on page ready
+        window.addEventListener('DOMContentLoaded', () => {
+            connectSSE();
+            checkDemoParam();
+        });
+    </script>
+</body>
+</html>
