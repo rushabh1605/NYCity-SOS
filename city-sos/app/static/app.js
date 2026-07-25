@@ -176,13 +176,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function parsePeopleCountFromHistory(history) {
     const combinedText = history.join(" ").toLowerCase();
-    const map = { "one": 1, "1": 1, "two": 2, "2": 2, "three": 3, "3": 3, "four": 4, "4": 4, "five": 5, "5": 5 };
-    for (const [word, val] of Object.entries(map)) {
-      const regex = new RegExp('\\b' + word + '\\b', 'i');
+    
+    // 1. Check for explicit digit phrases like "7 people", "4 pizzas", "5 persons"
+    const match = combinedText.match(/\b(\d+)\s*(?:people|persons|pizzas|pies|large|medium|small)\b/i);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+
+    const wordToNum = {
+      "twelve": 12, "eleven": 11, "ten": 10, "nine": 9, "eight": 8, "seven": 7,
+      "six": 6, "five": 5, "four": 4, "three": 3, "two": 2, "one": 1
+    };
+
+    // 2. Check for word phrases like "seven people", "four pizzas"
+    for (const [word, num] of Object.entries(wordToNum)) {
+      const regex = new RegExp('\\b' + word + '\\s*(?:people|persons|pizzas|pies|large|medium|small)\\b', 'i');
       if (regex.test(combinedText)) {
-        return val;
+        return num;
       }
     }
+
+    // 3. Fallback to any standalone number mentioned in user lines specifically
+    const userLines = history.filter(line => line.toLowerCase().startsWith("user:")).join(" ").toLowerCase();
+    const digitMatch = userLines.match(/\b([1-9]|[1-9]\d)\b/);
+    if (digitMatch) {
+      return parseInt(digitMatch[1], 10);
+    }
+
+    for (const [word, num] of Object.entries(wordToNum)) {
+      const regex = new RegExp('\\b' + word + '\\b', 'i');
+      if (regex.test(userLines)) {
+        return num;
+      }
+    }
+
     return 0;
   }
 

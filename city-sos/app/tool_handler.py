@@ -80,17 +80,33 @@ alert_manager = AlertManager()
 def parse_people_count_from_transcript(transcript_tail: List[str]) -> int:
     """Helper to infer count of people if people_present passed as 0."""
     text = " ".join(transcript_tail).lower()
-    num_map = {
-        "one": 1, "1": 1, "single": 1,
-        "two": 2, "2": 2, "pair": 2,
-        "three": 3, "3": 3, "triple": 3,
-        "four": 4, "4": 4,
-        "five": 5, "5": 5,
-        "six": 6, "6": 6
+    
+    # 1. Check for explicit digit phrases like "7 people", "4 pizzas", "5 persons"
+    match = re.search(r'\b(\d+)\s*(?:people|persons|pizzas|pies|large|medium|small)\b', text)
+    if match:
+        return int(match.group(1))
+
+    word_to_num = {
+        "twelve": 12, "eleven": 11, "ten": 10, "nine": 9, "eight": 8, "seven": 7,
+        "six": 6, "five": 5, "four": 4, "three": 3, "two": 2, "one": 1
     }
-    for word, num in num_map.items():
-        if re.search(r'\b' + word + r'\b', text):
+
+    # 2. Check for word phrases like "seven people", "four pizzas"
+    for word, num in word_to_num.items():
+        if re.search(r'\b' + word + r'\s*(?:people|persons|pizzas|pies|large|medium|small)\b', text):
             return num
+
+    # 3. Fallback to any standalone number mentioned by user lines specifically
+    user_text = " ".join([line for line in transcript_tail if "user:" in line.lower()]).lower()
+    
+    digits = re.findall(r'\b([1-9]|[1-9]\d)\b', user_text)
+    if digits:
+        return int(digits[0])
+
+    for word, num in word_to_num.items():
+        if re.search(r'\b' + word + r'\b', user_text):
+            return num
+
     return 0
 
 def create_alert_payload(
