@@ -1,4 +1,5 @@
 import uuid
+import re
 import datetime
 import asyncio
 from typing import Dict, Any, List, Set
@@ -16,11 +17,11 @@ TRIGGER_ESCALATION_TOOL = {
             },
             "people_present": {
                 "type": "INTEGER",
-                "description": "Number of other people with the user, if it was communicated in code. Use 0 if unknown."
+                "description": "Number of other people with the user, inferred from number of pizzas requested. Use 0 if unknown."
             },
             "location_hint": {
                 "type": "STRING",
-                "description": "Any location detail the user gave in code, or empty string."
+                "description": "Any street address or location detail the user gave in code, or empty string."
             },
             "urgency": {
                 "type": "STRING",
@@ -45,7 +46,6 @@ class AlertManager:
         self.subscribers.discard(queue)
 
     async def broadcast_alert(self, alert_data: Dict[str, Any]):
-        # Add to active alerts list (keep latest 10)
         self.active_alerts.insert(0, alert_data)
         if len(self.active_alerts) > 10:
             self.active_alerts.pop()
@@ -77,6 +77,22 @@ class AlertManager:
 
 alert_manager = AlertManager()
 
+def parse_people_count_from_transcript(transcript_tail: List[str]) -> int:
+    """Helper to infer count of people if people_present passed as 0."""
+    text = " ".join(transcript_tail).lower()
+    num_map = {
+        "one": 1, "1": 1, "single": 1,
+        "two": 2, "2": 2, "pair": 2,
+        "three": 3, "3": 3, "triple": 3,
+        "four": 4, "4": 4,
+        "five": 5, "5": 5,
+        "six": 6, "6": 6
+    }
+    for word, num in num_map.items():
+        if re.search(r'\b' + word + r'\b', text):
+            return num
+    return 0
+
 def create_alert_payload(
     situation_summary: str,
     urgency: str = "immediate",
@@ -84,7 +100,7 @@ def create_alert_payload(
     location_hint: str = "",
     transcript_tail: List[str] = None
 ) -> Dict[str, Any]:
-    if transcript_tail is None:
+    if transcript_tail is None or len(transcript_tail) == 0:
         transcript_tail = [
             "user: I'd like to order a pizza",
             "agent: Sure — how many?",
@@ -92,15 +108,30 @@ def create_alert_payload(
             "agent: Got it. Delivery or pickup?",
             "user: Delivery. And uh, extra pineapple on that."
         ]
-        
+
+    # Inferred count fallback
+    if people_present == 0:
+        people_present = parse_people_count_from_transcript(transcript_tail)
+
+    # Dynamic location label assignment
+    location_label = DEFAULT_LOCATION["label"]
+    if location_hint and len(location_hint.strip()) > 2:
+        location_label = location_hint.strip()
+
+    location_obj = {
+        "lat": DEFAULT_LOCATION["lat"],
+        "lng": DEFAULT_LOCATION["lng"],
+        "label": location_label
+    }
+
     return {
         "alert_id": str(uuid.uuid4()),
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "user": DEFAULT_USER,
-        "location": DEFAULT_LOCATION,
+        "location": location_obj,
         "situation_summary": situation_summary,
         "people_present": people_present,
-        "location_hint": location_hint,
+        "location_hint": location_hint or location_label,
         "urgency": urgency,
         "transcript_tail": transcript_tail
     }

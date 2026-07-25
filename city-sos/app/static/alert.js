@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const transcriptHtml = transcriptLines.length > 0
       ? transcriptLines.map(line => `<div>${escapeHtml(line)}</div>`).join('')
-      : '<div>user: I\'d like to order a pizza</div><div>agent: Sure — how many?</div><div>user: Three, please. Extra cheese.</div><div>agent: Got it. Delivery or pickup?</div><div>user: Delivery. And extra pineapple on that.</div>';
+      : '<div style="color: var(--text-muted); font-style: italic;">[Live conversation transcript in progress...]</div>';
 
     card.innerHTML = `
       <div class="card-header">

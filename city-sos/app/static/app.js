@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const devToolbar = document.getElementById('devToolbar');
   const chatInput = document.getElementById('chatInput');
   const sendChatBtn = document.getElementById('sendChatBtn');
+  const resetSessionBtn = document.getElementById('resetSessionBtn');
 
   const transcriptHistory = [
     "agent: Hello! I'm your City SOS companion. How can I help you today?"
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const adapter = new VoiceAdapter({
     onConnected: () => {
+      alertTriggered = false; // Fresh session state
       updateUIState('connected');
     },
     onDisconnected: () => {
@@ -65,8 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  const resetSessionBtn = document.getElementById('resetSessionBtn');
-
   function resetSessionState() {
     if (adapter) {
       adapter.disconnect();
@@ -98,7 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = chatInput.value.trim();
     if (!text) return;
     
-    // Auto-connect if disconnected
     if (!adapter.isConnected) {
       adapter.connect(false).then(() => {
         adapter.sendTextMessage(text);
@@ -176,8 +175,20 @@ document.addEventListener('DOMContentLoaded', () => {
     transcriptBody.scrollTop = transcriptBody.scrollHeight;
   }
 
-  function getLatestTranscriptTail(count = 5) {
+  function getLatestTranscriptTail(count = 8) {
     return transcriptHistory.slice(-count);
+  }
+
+  function parsePeopleCountFromHistory(history) {
+    const combinedText = history.join(" ").toLowerCase();
+    const map = { "one": 1, "1": 1, "two": 2, "2": 2, "three": 3, "3": 3, "four": 4, "4": 4, "five": 5, "5": 5 };
+    for (const [word, val] of Object.entries(map)) {
+      const regex = new RegExp('\\b' + word + '\\b', 'i');
+      if (regex.test(combinedText)) {
+        return val;
+      }
+    }
+    return 0;
   }
 
   function triggerEscalationAlert(situationSummary, peoplePresent, locationHint, urgency) {
@@ -188,6 +199,16 @@ document.addEventListener('DOMContentLoaded', () => {
     alertTriggered = true;
 
     const selectedCampus = campusSelect ? campusSelect.value : "NYU Tandon";
+
+    // Dynamic count inference if 0
+    let finalCount = Number.isInteger(peoplePresent) && peoplePresent > 0 
+      ? peoplePresent 
+      : parsePeopleCountFromHistory(transcriptHistory);
+
+    // Dynamic location label assignment (Never hardcode if user specified an address!)
+    const dynamicAddress = (locationHint && locationHint.trim().length > 2)
+      ? locationHint.trim()
+      : (selectedCampus + " (5 MetroTech Center, Brooklyn, NY 11201)");
 
     const alertPayload = {
       alert_id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'alert-' + Date.now(),
@@ -200,13 +221,13 @@ document.addEventListener('DOMContentLoaded', () => {
       location: {
         lat: 40.6942,
         lng: -73.9865,
-        label: "5 MetroTech Center, Brooklyn, NY 11201"
+        label: dynamicAddress
       },
-      situation_summary: situationSummary || "Caller indicates two other people present and is unable to leave the location.",
-      people_present: Number.isInteger(peoplePresent) ? peoplePresent : 0,
-      location_hint: locationHint || "",
+      situation_summary: situationSummary || `Caller requested delivery to ${dynamicAddress} with ${finalCount} people present.`,
+      people_present: finalCount,
+      location_hint: dynamicAddress,
       urgency: urgency || "immediate",
-      transcript_tail: getLatestTranscriptTail(5)
+      transcript_tail: getLatestTranscriptTail(8)
     };
 
     console.log('Posting exact frozen alert payload to BroadcastChannel city-sos-alerts:', alertPayload);
@@ -239,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         triggerEscalationAlert(
           "Caller indicates two other people present and extra cheese (unable to leave). Requested delivery to 5 MetroTech Center.",
-          2,
+          3,
           "5 MetroTech Center, Brooklyn NY",
           "immediate"
         );
@@ -255,13 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     devBtnReset.addEventListener('click', () => {
-      alertTriggered = false;
-      currentMode = 'normal';
-      statusDot.className = 'status-dot';
-      statusLabel.textContent = "Companion Ready";
-      transcriptHistory.length = 0;
-      transcriptBody.innerHTML = '';
-      appendTranscriptLine('agent', "Hello! I'm your City SOS companion. How can I help you today?");
+      resetSessionState();
     });
   }
 });

@@ -31,6 +31,9 @@ export class VoiceAdapter {
   }
 
   async connect(enableMic = true) {
+    if (this.isConnected || this.ws) {
+      this.disconnect();
+    }
     this.state = 'connecting';
     
     try {
