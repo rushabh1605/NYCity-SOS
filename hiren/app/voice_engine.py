@@ -106,12 +106,10 @@ class GeminiLiveSession:
                     if pcm_base64 and self.gemini_ws:
                         realtime_input = {
                             "realtimeInput": {
-                                "mediaChunks": [
-                                    {
-                                        "mimeType": "audio/pcm;rate=16000",
-                                        "data": pcm_base64
-                                    }
-                                ]
+                                "audio": {
+                                    "mimeType": "audio/pcm;rate=16000",
+                                    "data": pcm_base64
+                                }
                             }
                         }
                         await self.gemini_ws.send(json.dumps(realtime_input))
@@ -120,12 +118,19 @@ class GeminiLiveSession:
                     text = data.get("text", "")
                     if text:
                         self._add_transcript("user", text)
+                        if self.gemini_ws:
+                            realtime_input = {
+                                "realtimeInput": {
+                                    "text": text
+                                }
+                            }
+                            await self.gemini_ws.send(json.dumps(realtime_input))
 
                 elif msg_type == "ping":
                     await self.client_ws.send_json({"type": "pong"})
 
         except Exception as e:
-            logger.debug(f"Client to Gemini pump ended: {e}")
+            logger.info(f"Client to Gemini pump ended: {e}")
 
     async def _pump_gemini_to_client(self):
         try:
