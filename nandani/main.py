@@ -15,8 +15,15 @@ Features:
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Dict, Any, List
+from dotenv import load_dotenv
+
+# Try loading .env from parent directory or current directory
+load_dotenv(dotenv_path="../.env")
+load_dotenv()
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -202,11 +209,13 @@ async def clear_alert():
 
 if __name__ == "__main__":
     import uvicorn
-    import os
     
     # Pre-create directory paths to avoid path resolution errors
     os.makedirs("nandani/static", exist_ok=True)
     os.makedirs("nandani/templates", exist_ok=True)
     
-    logger.info("Starting City SOS Alert Server on http://127.0.0.1:8000")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Read port configuration from environment variables (.env)
+    port = int(os.getenv("PORT", 8000))
+    
+    logger.info(f"Starting City SOS Alert Server on http://127.0.0.1:{port}")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

@@ -12,8 +12,16 @@ on the dashboard step-by-step.
 
 import requests
 import json
+import os
+from dotenv import load_dotenv
 
-BASE_URL = "http://127.0.0.1:8000"
+# Try loading env variables from parent directory or current directory
+load_dotenv(dotenv_path="../.env")
+load_dotenv()
+
+# Read the custom port configuration from .env, defaulting to 8000
+port = int(os.getenv("PORT", 8000))
+BASE_URL = f"http://127.0.0.1:{port}"
 
 def send_alert(name, payload):
     """
