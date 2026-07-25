@@ -128,3 +128,24 @@ export GEMINI_API_KEY="your-api-key-here"
 1. Rushabh merges Hiren's FastAPI routes in `hiren/app/main.py` into the root application.
 2. Nandani's alert screen connects to `BroadcastChannel('city-sos-alerts')` and `/api/alerts/stream`.
 3. Host on Cloud Run / Vercel with HTTPS enabled so microphone permissions work seamlessly on mobile browsers.
+
+---
+
+## 5. Development Code Quality & Git Guidelines
+
+To maintain code reliability, prevent repository clutter, and ensure readable collaboration between human builders and AI agents, all team members must adhere to these policies:
+
+### 1. Repository Cleanliness & Git Discipline
+*   **Prevent Trash Files**: Unnecessary metadata files, operating system files (e.g., `.DS_Store`), virtual environments (`.venv`), or build artifacts must **never** be pushed to the repository.
+*   **Always configure `.gitignore`**: Make sure python cache directories (`__pycache__/`, `*.pyc`), environment variables/secrets (`.env`), and temporary system folder variables are explicitly ignored before you commit.
+*   **Cross-Check Diff**: Run `git status` and `git diff --stat` before staging/committing to verify no unintended junk files are scheduled for push.
+
+### 2. Comprehensive Comments and Documentation
+*   **Human/Agent Co-Readability**: Every functional module, endpoint handler, helper logic, and asynchronous flow must be preceded by detailed docstrings and context comments.
+*   **Explain Intent, Not Just Action**: Comments should explain *why* a particular fallback, parameter mapping, or exception check exists, making it easy for team members and AI tools to understand constraints instantly.
+
+### 3. Pre-Push Validation (Verification Protocols)
+*   **No Untested Pushes**: Every piece of code must be run and verified locally before a git push is executed.
+*   **Verify Positive Cases**: Run test scripts to confirm target features operate correctly under normal payload conditions.
+*   **Verify Negative/Edge Cases**: Actively test inputs with missing attributes, incorrect types, empty strings, and connection loss to verify structural stability and error boundaries.
+
