@@ -15,6 +15,7 @@ import json
 import os
 
 try:
+    # pyrefly: ignore [missing-import]
     from dotenv import load_dotenv
     # Try loading env variables from parent directory or current directory
     load_dotenv(dotenv_path="../.env")
