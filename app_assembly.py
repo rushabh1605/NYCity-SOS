@@ -56,10 +56,11 @@ async def get_alert_page(request: Request):
     Serves Nandani's beautiful emergency dispatch screen as a rendered Template
     passing the custom CSS static asset path.
     """
-    return templates.TemplateResponse("index.html", {
-        "request": request, 
-        "css_path": "/nandani-static/style.css"
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"css_path": "/nandani-static/style.css"}
+    )
 
 @app.get("/api/status")
 async def get_status():

@@ -87,7 +87,7 @@ async def get_dashboard(request: Request):
     """
     Renders the dispatch monitoring dashboard interface.
     """
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 @app.get("/api/events")
 @app.get("/api/alerts/stream")
