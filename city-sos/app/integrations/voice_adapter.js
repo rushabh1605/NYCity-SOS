@@ -135,6 +135,11 @@ export class VoiceAdapter {
       this.ws = null;
     }
 
+    if (this.recognition) {
+      try { this.recognition.stop(); } catch(e) {}
+      this.recognition = null;
+    }
+
     this._stopAudioPlayback();
     this.handlers.onDisconnected();
   }
@@ -176,8 +181,51 @@ export class VoiceAdapter {
 
       source.connect(this.micProcessor);
       this.micProcessor.connect(inputContext.destination);
+      this._startSpeechRecognition();
     } catch (e) {
       console.warn('Microphone audio capture error:', e);
+    }
+  }
+
+  _startSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    try {
+      if (this.recognition) {
+        try { this.recognition.stop(); } catch(err) {}
+      }
+      this.recognition = new SpeechRecognition();
+      this.recognition.continuous = true;
+      this.recognition.interimResults = false;
+      this.recognition.lang = 'en-US';
+
+      this.recognition.onresult = (event) => {
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            const transcript = event.results[i][0].transcript.trim();
+            if (transcript) {
+              console.log('🗣️ User spoken transcript captured:', transcript);
+              this.handlers.onUserTranscript(transcript);
+              this._detectCoverKeywords(transcript);
+              if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                  type: 'text_transcript',
+                  text: transcript
+                }));
+              }
+            }
+          }
+        }
+      };
+
+      this.recognition.onerror = (e) => {
+        console.warn('Speech recognition error:', e.error);
+      };
+
+      this.recognition.start();
+    } catch (e) {
+      console.warn('Could not initialize SpeechRecognition:', e);
     }
   }
 

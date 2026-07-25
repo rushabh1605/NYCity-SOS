@@ -34,6 +34,7 @@ body {
   flex-direction: column;
 }
 
+/* Header & Brand */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -72,6 +73,7 @@ body {
   color: var(--text-secondary);
 }
 
+/* Stealth Status Indicator */
 .stealth-status {
   display: flex;
   align-items: center;
@@ -109,6 +111,7 @@ body {
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* Container */
 .main-container {
   max-width: 900px;
   width: 100%;
@@ -120,6 +123,7 @@ body {
   flex: 1;
 }
 
+/* Settings Bar */
 .settings-bar {
   display: flex;
   align-items: center;
@@ -148,6 +152,7 @@ body {
   cursor: pointer;
 }
 
+/* Talk Button Control Center */
 .control-center {
   display: flex;
   flex-direction: column;
@@ -219,6 +224,7 @@ body {
   color: var(--text-secondary);
 }
 
+/* Transcript Card */
 .transcript-card {
   background: var(--bg-card);
   border-radius: 12px;
@@ -310,6 +316,7 @@ body {
   border-bottom-left-radius: 2px;
 }
 
+/* Development Mock Toolbar (?dev=1) */
 .dev-toolbar {
   background: #111827;
   border: 1px solid #374151;
@@ -365,6 +372,7 @@ body {
   background: var(--accent-red);
 }
 
+/* Nandani's Alert Screen Specific Styles */
 .alert-wrapper {
   background-color: #0b0f19;
   min-height: 100vh;
@@ -520,3 +528,329 @@ body {
   letter-spacing: 0.05em;
   font-weight: 600;
 }
+
+/* Error State & Chat Input Fallback */
+.talk-btn.error {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b);
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+}
+
+.chat-input-bar {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 500px;
+  margin-top: 1.25rem;
+}
+
+.chat-input {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.chat-input:focus {
+  border-color: var(--accent-cyan);
+}
+
+.send-chat-btn {
+  background: var(--accent-cyan);
+  color: #090d16;
+  border: none;
+  font-weight: 700;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: opacity 0.2s ease;
+}
+
+.send-chat-btn:hover {
+  opacity: 0.9;
+}
+
+/* Reset Session Button */
+.reset-session-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reset-session-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+}
+
+/* Multi-Alert Dashboard & Standby Radar */
+.standby-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.standby-radar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid rgba(6, 182, 212, 0.3);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  background: radial-gradient(circle, rgba(6,182,212,0.05) 0%, rgba(9,13,22,0.9) 70%);
+}
+
+.radar-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(6, 182, 212, 0.4) 0deg, transparent 60deg);
+  animation: radar-spin 3s linear infinite;
+}
+
+.radar-dot {
+  position: absolute;
+  top: 40px;
+  left: 70px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--accent-cyan);
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes radar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+.standby-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.standby-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 500px;
+  margin-bottom: 1.5rem;
+}
+
+.demo-trigger-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.demo-trigger-btn:hover {
+  transform: scale(1.03);
+}
+
+.active-count-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+
+.clear-all-btn {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.clear-all-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* Multi-Alert Container & Grid Cards */
+.alerts-dashboard {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+.alert-card-grid {
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transition: border-color 0.3s ease;
+}
+
+.alert-card-grid.urgency-immediate {
+  border: 1px solid var(--alert-red-border);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.alert-card-grid.urgency-standard {
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.card-header {
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-status-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+}
+
+.card-status-badge.immediate {
+  background: var(--alert-red);
+  color: white;
+}
+
+.card-status-badge.standard {
+  background: var(--alert-amber);
+  color: #090d16;
+}
+
+.card-id {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.dismiss-card-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dismiss-card-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecdd3;
+  border-color: var(--alert-red);
+}
+
+.card-body {
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Vector Map Styling */
+.vector-map-wrapper {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.vector-map-svg {
+  width: 100%;
+  height: 150px;
+  display: block;
+}
+
+.map-badge-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  background: rgba(9, 13, 22, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.transcript-tail-box {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.85rem;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  height: 140px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+

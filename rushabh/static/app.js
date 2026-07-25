@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const devToolbar = document.getElementById('devToolbar');
   const chatInput = document.getElementById('chatInput');
   const sendChatBtn = document.getElementById('sendChatBtn');
+  const resetSessionBtn = document.getElementById('resetSessionBtn');
 
   const transcriptHistory = [
     "agent: Hello! I'm your City SOS companion. How can I help you today?"
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const adapter = new VoiceAdapter({
     onConnected: () => {
+      alertTriggered = false; // Fresh session state
       updateUIState('connected');
     },
     onDisconnected: () => {
@@ -52,18 +54,31 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     onToolCall: (name, args) => {
       if (name === 'trigger_escalation') {
-        triggerEscalationAlert(
-          args.situation_summary || "Emergency situation reported in cover mode.",
-          args.people_present ?? 0,
-          args.location_hint || "",
-          args.urgency || "immediate"
-        );
+        triggerEscalationAlert(args);
       }
     },
     onError: (err) => {
       updateUIState('error', err);
     }
   });
+
+  function resetSessionState() {
+    if (adapter) {
+      adapter.disconnect();
+    }
+    alertTriggered = false;
+    currentMode = 'normal';
+    statusDot.className = 'status-dot';
+    statusLabel.textContent = 'Companion Ready';
+    transcriptHistory.length = 0;
+    transcriptBody.innerHTML = '';
+    appendTranscriptLine('agent', "Hello! I'm your City SOS companion. How can I help you today?");
+    updateUIState('disconnected');
+  }
+
+  if (resetSessionBtn) {
+    resetSessionBtn.addEventListener('click', resetSessionState);
+  }
 
   talkBtn.addEventListener('click', () => {
     if (!adapter.isConnected && adapter.state === 'idle') {
@@ -73,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Text input chat handlers
   function handleSendChat() {
     const text = chatInput.value.trim();
     if (!text) return;
@@ -154,18 +170,82 @@ document.addEventListener('DOMContentLoaded', () => {
     transcriptBody.scrollTop = transcriptBody.scrollHeight;
   }
 
-  function getLatestTranscriptTail(count = 5) {
+  function getLatestTranscriptTail(count = 8) {
     return transcriptHistory.slice(-count);
   }
 
-  function triggerEscalationAlert(situationSummary, peoplePresent, locationHint, urgency) {
+  function parsePeopleCountFromHistory(history) {
+    const combinedText = history.join(" ").toLowerCase();
+    
+    // 1. Check for explicit digit phrases like "7 people", "4 pizzas", "5 persons"
+    const match = combinedText.match(/\b(\d+)\s*(?:people|persons|pizzas|pies|large|medium|small)\b/i);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+
+    const wordToNum = {
+      "twelve": 12, "eleven": 11, "ten": 10, "nine": 9, "eight": 8, "seven": 7,
+      "six": 6, "five": 5, "four": 4, "three": 3, "two": 2, "one": 1
+    };
+
+    // 2. Check for word phrases like "seven people", "four pizzas"
+    for (const [word, num] of Object.entries(wordToNum)) {
+      const regex = new RegExp('\\b' + word + '\\s*(?:people|persons|pizzas|pies|large|medium|small)\\b', 'i');
+      if (regex.test(combinedText)) {
+        return num;
+      }
+    }
+
+    // 3. Fallback to any standalone number mentioned in user lines specifically
+    const userLines = history.filter(line => line.toLowerCase().startsWith("user:")).join(" ").toLowerCase();
+    const digitMatch = userLines.match(/\b([1-9]|[1-9]\d)\b/);
+    if (digitMatch) {
+      return parseInt(digitMatch[1], 10);
+    }
+
+    for (const [word, num] of Object.entries(wordToNum)) {
+      const regex = new RegExp('\\b' + word + '\\b', 'i');
+      if (regex.test(userLines)) {
+        return num;
+      }
+    }
+
+    return 0;
+  }
+
+  function triggerEscalationAlert(args = {}) {
     if (alertTriggered) {
       console.log('Escalation already triggered in this session. Preventing duplicate.');
       return;
     }
     alertTriggered = true;
 
+    // If args is already a complete canonical payload from backend
+    if (args && args.alert_id) {
+      if (!args.transcript_tail || args.transcript_tail.length === 0) {
+        args.transcript_tail = getLatestTranscriptTail(10);
+      }
+      console.log('Posting canonical alert payload to BroadcastChannel:', args);
+      if (bus) {
+        bus.postMessage(args);
+      }
+      return;
+    }
+
+    const situationSummary = args.situation_summary || "Caller requested emergency escalation in cover mode.";
+    const peoplePresent = args.people_present ?? 0;
+    const locationHint = args.location_hint || "";
+    const urgency = args.urgency || "immediate";
+
     const selectedCampus = campusSelect ? campusSelect.value : "NYU Tandon";
+
+    let finalCount = Number.isInteger(peoplePresent) && peoplePresent > 0 
+      ? peoplePresent 
+      : parsePeopleCountFromHistory(transcriptHistory);
+
+    const dynamicAddress = (locationHint && locationHint.trim().length > 2)
+      ? locationHint.trim()
+      : (selectedCampus + " (5 MetroTech Center, Brooklyn, NY 11201)");
 
     const alertPayload = {
       alert_id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'alert-' + Date.now(),
@@ -178,16 +258,16 @@ document.addEventListener('DOMContentLoaded', () => {
       location: {
         lat: 40.6942,
         lng: -73.9865,
-        label: "5 MetroTech Center, Brooklyn, NY 11201"
+        label: dynamicAddress
       },
-      situation_summary: situationSummary || "Caller indicates two other people present and is unable to leave the location.",
-      people_present: Number.isInteger(peoplePresent) ? peoplePresent : 0,
-      location_hint: locationHint || "",
-      urgency: urgency || "immediate",
-      transcript_tail: getLatestTranscriptTail(5)
+      situation_summary: situationSummary,
+      people_present: finalCount,
+      location_hint: dynamicAddress,
+      urgency: urgency,
+      transcript_tail: getLatestTranscriptTail(8)
     };
 
-    console.log('Posting exact frozen alert payload to BroadcastChannel city-sos-alerts:', alertPayload);
+    console.log('Posting alert payload to BroadcastChannel city-sos-alerts:', alertPayload);
 
     if (bus) {
       bus.postMessage(alertPayload);
@@ -217,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         triggerEscalationAlert(
           "Caller indicates two other people present and extra cheese (unable to leave). Requested delivery to 5 MetroTech Center.",
-          2,
+          3,
           "5 MetroTech Center, Brooklyn NY",
           "immediate"
         );
@@ -233,13 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     devBtnReset.addEventListener('click', () => {
-      alertTriggered = false;
-      currentMode = 'normal';
-      statusDot.className = 'status-dot';
-      statusLabel.textContent = "Companion Ready";
-      transcriptHistory.length = 0;
-      transcriptBody.innerHTML = '';
-      appendTranscriptLine('agent', "Hello! I'm your City SOS companion. How can I help you today?");
+      resetSessionState();
     });
   }
 });
