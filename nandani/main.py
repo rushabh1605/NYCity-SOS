@@ -18,11 +18,17 @@ import logging
 import os
 from datetime import datetime
 from typing import Dict, Any, List
-from dotenv import load_dotenv
 
-# Try loading .env from parent directory or current directory
-load_dotenv(dotenv_path="../.env")
-load_dotenv()
+try:
+    # pyrefly: ignore [missing-import]
+    from dotenv import load_dotenv
+    # Try loading .env from parent directory or current directory
+    load_dotenv(dotenv_path="../.env")
+    load_dotenv()
+except ImportError:
+    # Graceful fallback if python-dotenv is not installed in the active IDE/Python interpreter
+    def load_dotenv(*args, **kwargs):
+        pass
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse

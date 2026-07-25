@@ -13,11 +13,16 @@ on the dashboard step-by-step.
 import requests
 import json
 import os
-from dotenv import load_dotenv
 
-# Try loading env variables from parent directory or current directory
-load_dotenv(dotenv_path="../.env")
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    # Try loading env variables from parent directory or current directory
+    load_dotenv(dotenv_path="../.env")
+    load_dotenv()
+except ImportError:
+    # Graceful fallback if python-dotenv is not installed in the active IDE/Python interpreter
+    def load_dotenv(*args, **kwargs):
+        pass
 
 # Read the custom port configuration from .env, defaulting to 8000
 port = int(os.getenv("PORT", 8000))
