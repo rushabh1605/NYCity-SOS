@@ -116,14 +116,8 @@ def create_alert_payload(
     location_hint: str = "",
     transcript_tail: List[str] = None
 ) -> Dict[str, Any]:
-    if transcript_tail is None or len(transcript_tail) == 0:
-        transcript_tail = [
-            "user: I'd like to order a pizza",
-            "agent: Sure — how many?",
-            "user: Three, please. And extra cheese.",
-            "agent: Got it. Delivery or pickup?",
-            "user: Delivery. And uh, extra pineapple on that."
-        ]
+    if transcript_tail is None:
+        transcript_tail = []
 
     # Inferred count fallback
     if people_present == 0:

@@ -222,6 +222,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // If args is already a complete canonical payload from backend
     if (args && args.alert_id) {
+      if (!args.transcript_tail || args.transcript_tail.length === 0) {
+        args.transcript_tail = getLatestTranscriptTail(10);
+      }
       console.log('Posting canonical alert payload to BroadcastChannel:', args);
       if (bus) {
         bus.postMessage(args);
