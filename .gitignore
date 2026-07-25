@@ -25,3 +25,4 @@ Thumbs.db
 # IDE & Editor files
 .vscode/
 .idea/
+.DS_Store
