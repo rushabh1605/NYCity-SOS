@@ -24,5 +24,5 @@ COPY . .
 # Expose target application port
 EXPOSE 8080
 
-# Command to run uvicorn server in production
-CMD ["sh", "-c", "uvicorn app_assembly:app --host 0.0.0.0 --port ${PORT}"]
+# Command to run uvicorn server in production using the master runner
+CMD ["python", "run.py"]
